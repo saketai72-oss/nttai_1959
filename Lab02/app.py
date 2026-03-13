@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, json
 from cipher.caesar import CaesarCipher
-
+from cipher.vigenere import VigenereCipher
 app = Flask(__name__)
 
 #router routes for home page
@@ -13,21 +13,58 @@ def home():
 def caesar():
     return render_template('caesar.html')
 
-@app.route("/encrypt", methods=['POST'])
+@app.route("/caesar/encrypt", methods=['POST'])
 def caesar_encrypt():
     text = request.form['inputPlainText']
     key = int(request.form['inputKeyPlain'])
     Caesar = CaesarCipher()
     encrypted_text = Caesar.encrypt_text(text, key)
-    return f"text: {text}<br/>key: {key}<br/>encrypted text: {encrypted_text}"
+    return render_template('caesar.html', 
+                           action='encrypt', 
+                           text=text, 
+                           key=key, 
+                           result=encrypted_text)
 
-@app.route("/decrypt", methods=['POST'])
+@app.route("/caesar/decrypt", methods=['POST'])
 def caesar_decrypt():
     text = request.form['inputCipherText']
     key = int(request.form['inputKeyCipher'])
     Caesar = CaesarCipher()
     decrypted_text = Caesar.decrypt_text(text, key)
-    return f"text: {text}<br/>key: {key}<br/>decrypted text: {decrypted_text}"
+    return render_template('caesar.html', 
+                           action='decrypt', 
+                           text=text, 
+                           key=key, 
+                           result=decrypted_text)
+
+#router routes for vigenere cypher
+@app.route("/vigenere")
+def vigenere():
+    return render_template('vigenere.html')
+
+@app.route("/vigenere/encrypt", methods=['POST'])
+def vigenere_encrypt():
+    text = request.form['inputPlainText']
+    key = request.form['inputKeyPlain']
+    vigenere = VigenereCipher()
+    encrypted_text = vigenere.vigenere_encrypt(text, key)
+    return render_template('vigenere.html', 
+                           action='encrypt', 
+                           text=text, 
+                           key=key, 
+                           result=encrypted_text)
+
+@app.route("/vigenere/decrypt", methods=['POST'])
+def vigenere_decrypt():
+    text = request.form['inputCipherText']
+    key = request.form['inputKeyCipher']
+    vigenere = VigenereCipher()
+    decrypted_text = vigenere.vigenere_decrypt(text, key)
+    return render_template('vigenere.html', 
+                           action='decrypt', 
+                           text=text, 
+                           key=key, 
+                           result=decrypted_text)
 
 #main function
 if __name__ == "__main__":
