@@ -2,12 +2,23 @@ from flask import Flask, render_template, request, json
 from cipher.caesar import CaesarCipher
 from cipher.vigenere import VigenereCipher
 from cipher.playfair import PlayFairCipher
+from cipher.railfence import RailFenceCipher
+from cipher.transposition import TranspositionCipher
 app = Flask(__name__)
 
 def clean_playfair_key(key_str):
     """Clean key for Playfair: remove non-alpha, spaces, J->I, upper."""
     cleaned = ''.join(c for c in key_str.upper().replace('J', 'I') if c.isalpha())
     return cleaned
+
+
+def parse_positive_int(value, default=1):
+    """Parse a value to a positive integer, falling back to default on invalid input."""
+    try:
+        key = int(value)
+        return key if key > 0 else default
+    except (ValueError, TypeError):
+        return default
 
 #router routes for home page
 @app.route("/")
@@ -19,127 +30,104 @@ def home():
 def caesar():
     return render_template('caesar.html')
 
-@app.route("/caesar/encrypt", methods=['POST'])
+@app.route("/playfair")
+def playfair():
+    return render_template('playfair.html')
+
+@app.route("/railfence")
+def railfence():
+    return render_template('railfence.html')
+
+@app.route("/vigenere")
+def vigenere():
+    return render_template('vigenere.html')
+
+@app.route("/transposition")
+def transposition():
+    return render_template('transposition.html')
+
+@app.route("/encrypt", methods=['POST'])
 def caesar_encrypt():
     text = request.form['inputPlainText']
     key = int(request.form['inputKeyPlain'])
     Caesar = CaesarCipher()
     encrypted_text = Caesar.encrypt_text(text, key)
-    return render_template('caesar.html', 
-                           action='encrypt', 
-                           text=text, 
-                           key=key, 
-                           result=encrypted_text)
+    return f"text: {text}<br/>key: {key}<br/>encrypted text: {encrypted_text}"
 
-@app.route("/caesar/decrypt", methods=['POST'])
+@app.route("/decrypt", methods=['POST'])
 def caesar_decrypt():
     text = request.form['inputCipherText']
     key = int(request.form['inputKeyCipher'])
     Caesar = CaesarCipher()
     decrypted_text = Caesar.decrypt_text(text, key)
-    return render_template('caesar.html', 
-                           action='decrypt', 
-                           text=text, 
-                           key=key, 
-                           result=decrypted_text)
+    return f"text: {text}<br/>key: {key}<br/>decrypted text: {decrypted_text}"
 
-#router routes for vigenere cypher
-@app.route("/vigenere")
-def vigenere():
-    return render_template('vigenere.html')
+@app.route("/playfair_encrypt", methods=['POST'])
+def playfair_encrypt():
+    text = request.form['inputPlainText']
+    key = clean_playfair_key(request.form['inputKeyPlain'])
+    Playfair = PlayFairCipher()
+    matrix = Playfair.create_playfair_matrix(key)
+    encrypted_text = Playfair.playfair_encrypt(text, matrix)
+    return f"text: {text}<br/>key: {key}<br/>encrypted text: {encrypted_text}"
 
-@app.route("/vigenere/encrypt", methods=['POST'])
+@app.route("/playfair_decrypt", methods=['POST'])
+def playfair_decrypt():
+    text = request.form['inputCipherText']
+    key = clean_playfair_key(request.form['inputKeyCipher'])
+    Playfair = PlayFairCipher()
+    matrix = Playfair.create_playfair_matrix(key)
+    decrypted_text = Playfair.playfair_decrypt(text, matrix)
+    return f"text: {text}<br/>key: {key}<br/>decrypted text: {decrypted_text}"
+
+@app.route("/railfence_encrypt", methods=['POST'])
+def railfence_encrypt():
+    text = request.form['inputPlainText']
+    key = parse_positive_int(request.form['inputKeyPlain'])
+    Railfence = RailFenceCipher()
+    encrypted_text = Railfence.rail_fence_encrypt(text, key)
+    return f"text: {text}<br/>key: {key}<br/>encrypted text: {encrypted_text}"
+
+@app.route("/railfence_decrypt", methods=['POST'])
+def railfence_decrypt():
+    text = request.form['inputCipherText']
+    key = parse_positive_int(request.form['inputKeyCipher'])
+    Railfence = RailFenceCipher()
+    decrypted_text = Railfence.rail_fence_decrypt(text, key)
+    return f"text: {text}<br/>key: {key}<br/>decrypted text: {decrypted_text}"
+
+@app.route("/vigenere_encrypt", methods=['POST'])
 def vigenere_encrypt():
     text = request.form['inputPlainText']
     key = request.form['inputKeyPlain']
-    vigenere = VigenereCipher()
-    encrypted_text = vigenere.vigenere_encrypt(text, key)
-    return render_template('vigenere.html', 
-                           action='encrypt', 
-                           text=text, 
-                           key=key, 
-                           result=encrypted_text)
+    Vigenere = VigenereCipher()
+    encrypted_text = Vigenere.vigenere_encrypt(text, key)
+    return f"text: {text}<br/>key: {key}<br/>encrypted text: {encrypted_text}"
 
-@app.route("/vigenere/decrypt", methods=['POST'])
+@app.route("/vigenere_decrypt", methods=['POST'])
 def vigenere_decrypt():
     text = request.form['inputCipherText']
     key = request.form['inputKeyCipher']
-    vigenere = VigenereCipher()
-    decrypted_text = vigenere.vigenere_decrypt(text, key)
-    return render_template('vigenere.html', 
-                           action='decrypt', 
-                           text=text, 
-                           key=key, 
-                           result=decrypted_text)
+    Vigenere = VigenereCipher()
+    decrypted_text = Vigenere.vigenere_decrypt(text, key)
+    return f"text: {text}<br/>key: {key}<br/>decrypted text: {decrypted_text}"
 
-
-
-#router routes for playfair cypher
-@app.route("/playfair")
-def playfair():
-    return render_template('playfair.html')
-
-@app.route("/playfair/create_playfair_matrix", methods=['POST'])
-def playfair_create_matrix_route():
-    raw_key = request.form['inputKeyMatrix']
-    key = clean_playfair_key(raw_key)
-    playfair = PlayFairCipher()
-    matrix = playfair.create_playfair_matrix(key)
-    # Format matrix nicely as 5x5 grid
-    matrix_str = '\n'.join([' '.join(row) for row in matrix])
-    return render_template('playfair.html', 
-                           action='create_matrix', 
-                           key=raw_key,
-                           cleaned_key=key,
-                           matrix=matrix_str)
-    
-@app.route("/playfair/generate_key", methods=['POST'])
-def playfair_generate_key_route():
-    keyword = request.form.get('inputKeyword', '').upper()
-    keyword = keyword.replace('J', 'I')
-    keyword = ''.join(filter(str.isalpha, keyword))
-    
-    alphabet = "ABCDEFGHIKLMNOPQRSTUVWXYZ"
-    result_key = []
-    for char in keyword + alphabet:
-        if char not in result_key:
-            result_key.append(char)
-            
-    generated_key = ''.join(result_key)
-    
-    return render_template('playfair.html', 
-                           action='generate_key', 
-                           key=generated_key)
-    
-@app.route("/playfair/encrypt", methods=['POST'])
-def playfair_encrypt():
+@app.route("/transposition_encrypt", methods=['POST'])
+def transposition_encrypt():
     text = request.form['inputPlainText']
-    raw_key = request.form['inputKeyPlain']
-    key = clean_playfair_key(raw_key)
-    playfair = PlayFairCipher()
-    matrix = playfair.create_playfair_matrix(key)
-    encrypted_text = playfair.playfair_encrypt(text, matrix)
-    return render_template('playfair.html', 
-                           action='encrypt', 
-                           text=text, 
-                           key=raw_key,
-                           cleaned_key=key,
-                           result=encrypted_text)
+    key = parse_positive_int(request.form['inputKeyPlain'])
+    Transposition = TranspositionCipher()
+    encrypted_text = Transposition.encrypt(text, key)
+    return f"text: {text}<br/>key: {key}<br/>encrypted text: {encrypted_text}"
 
-@app.route("/playfair/decrypt", methods=['POST'])
-def playfair_decrypt():
+@app.route("/transposition_decrypt", methods=['POST'])
+def transposition_decrypt():
     text = request.form['inputCipherText']
-    raw_key = request.form['inputKeyCipher']
-    key = clean_playfair_key(raw_key)
-    playfair = PlayFairCipher()
-    matrix = playfair.create_playfair_matrix(key)
-    decrypted_text = playfair.playfair_decrypt(text, matrix)
-    return render_template('playfair.html', 
-                           action='decrypt', 
-                           text=text, 
-                           key=raw_key,
-                           cleaned_key=key,
-                           result=decrypted_text)
+    key = parse_positive_int(request.form['inputKeyCipher'])
+    Transposition = TranspositionCipher()
+    decrypted_text = Transposition.decrypt(text, key)
+    return f"text: {text}<br/>key: {key}<br/>decrypted text: {decrypted_text}"
+
 #main function
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5050, debug=True)
